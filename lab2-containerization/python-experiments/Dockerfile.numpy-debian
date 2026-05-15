@@ -1,0 +1,28 @@
+# Experiment 5: Python "spaceship" starter WITH numpy, on the DEBIAN base.
+#
+# numpy publishes prebuilt "manylinux" wheels for glibc-based distributions.
+# On the Debian-based `python:3.13` image pip simply downloads that wheel,
+# so the build stays fast and no compiler/toolchain is needed.
+#
+# Before building, apply the numpy changes to the build context:
+#   * use requirements-numpy.in as the dependency manifest
+#   * overwrite spaceship/routers/api.py with api.py.numpy
+# (see python-experiments/README.md for the exact commands).
+#
+# Build:
+#   docker build -f Dockerfile.numpy-debian -t spaceship:numpy-debian .
+
+FROM python:3.13
+
+WORKDIR /app
+
+# Dependency manifest including numpy.
+COPY requirements-numpy.in requirements/backend.in
+RUN pip install --no-cache-dir -r requirements/backend.in
+
+COPY spaceship/ spaceship/
+COPY build/ build/
+
+EXPOSE 8080
+
+CMD ["uvicorn", "spaceship.main:app", "--host=0.0.0.0", "--port=8080"]

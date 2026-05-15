@@ -1,0 +1,13 @@
+# Dependency manifest for experiment 5 (numpy added).
+#
+# Use this file INSTEAD of the starter's requirements/backend.in when
+# building Dockerfile.numpy-debian / Dockerfile.numpy-alpine. Either copy
+# it over requirements/backend.in in the build context, or adjust the
+# COPY/pip lines in those Dockerfiles to point here.
+
+fastapi
+pydantic>=2.0
+pydantic-settings
+starlette
+uvicorn[standard]
+numpy

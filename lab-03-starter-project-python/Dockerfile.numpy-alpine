@@ -1,0 +1,45 @@
+# Experiment 5: Python "spaceship" starter WITH numpy, on the ALPINE base.
+#
+# This is the interesting half of experiment 5. Alpine uses musl libc, and
+# the prebuilt wheels numpy ships fall into two cases depending on the
+# version:
+#
+#   * If a `musllinux` wheel exists for this numpy version + Python version,
+#     pip downloads it and the build is fast — almost like Debian.
+#   * If no musllinux wheel is available, pip falls back to building numpy
+#     FROM SOURCE, which requires a C/C++/Fortran toolchain and BLAS/LAPACK
+#     headers. That build is slow (minutes) and pulls in a lot of packages.
+#
+# To make the experiment reproducible in BOTH cases, the build toolchain is
+# installed in a temporary virtual package and removed afterwards. When a
+# musllinux wheel is available the toolchain simply goes unused; when it is
+# not, it is what makes the build succeed at all.
+#
+# Record in the report which case actually happened (watch the pip output:
+# "Downloading numpy-...-musllinux_..." vs "Building wheel for numpy").
+#
+# Build:
+#   docker build -f Dockerfile.numpy-alpine -t spaceship:numpy-alpine .
+
+FROM python:3.13-alpine
+
+WORKDIR /app
+
+# Build toolchain needed IF numpy has to be compiled from source on musl.
+# Installed as a virtual package so it can be dropped in one step.
+RUN apk add --no-cache --virtual .build-deps \
+        gcc g++ gfortran musl-dev \
+        openblas-dev lapack-dev
+
+COPY requirements-numpy.in requirements/backend.in
+RUN pip install --no-cache-dir -r requirements/backend.in
+
+# Remove the build toolchain so it does not bloat the final image.
+RUN apk del .build-deps
+
+COPY spaceship/ spaceship/
+COPY build/ build/
+
+EXPOSE 8080
+
+CMD ["uvicorn", "spaceship.main:app", "--host=0.0.0.0", "--port=8080"]

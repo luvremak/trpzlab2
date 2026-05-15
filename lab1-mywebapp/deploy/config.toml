@@ -1,0 +1,21 @@
+# mywebapp configuration file (sample).
+#
+# The installer (deploy/install.sh) generates the real file at
+# /etc/mywebapp/config.toml with a randomly generated database password.
+# This sample is kept in the repository for reference and for local
+# development (point MYWEBAPP_CONFIG at a copy of this file).
+
+[server]
+# Interface and port the application binds to.
+# Used when the service runs WITHOUT systemd socket activation.
+# With socket activation the listening socket is owned by systemd and
+# defined in deploy/mywebapp.socket (ListenStream) — keep the port in sync.
+host = "127.0.0.1"
+port = 5200
+
+[database]
+host = "127.0.0.1"
+port = 5432
+name = "mywebapp"
+user = "mywebapp"
+password = "CHANGE_ME"

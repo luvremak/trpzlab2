@@ -1,0 +1,30 @@
+# Experiment 4: ALPINE base image for the Python "spaceship" starter.
+#
+# Same layer ordering as Dockerfile.optimized, but the base image is
+# `python:3.13-alpine` (built on Alpine Linux / musl libc) instead of
+# `python:3.13` (built on Debian / glibc).
+#
+# Alpine is a much smaller base (~50 MB vs ~1 GB for the Debian image),
+# which usually yields a dramatically smaller final image. The trade-off:
+# packages that ship only glibc "manylinux" wheels may have to be compiled
+# from source on Alpine — this project's pure-Python/Rust deps install
+# fine, but see Dockerfile.numpy-alpine for a package where it matters.
+#
+# Build:
+#   docker build -f Dockerfile.alpine -t spaceship:alpine .
+
+FROM python:3.13-alpine
+
+WORKDIR /app
+
+# --- Rarely changes: dependencies -----------------------------------------
+COPY requirements/ requirements/
+RUN pip install --no-cache-dir -r requirements/backend.in
+
+# --- Often changes: application code --------------------------------------
+COPY spaceship/ spaceship/
+COPY build/ build/
+
+EXPOSE 8080
+
+CMD ["uvicorn", "spaceship.main:app", "--host=0.0.0.0", "--port=8080"]

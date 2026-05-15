@@ -1,0 +1,30 @@
+# Experiment 1-2: NAIVE Dockerfile for the Python "spaceship" starter project.
+#
+# This is intentionally written the "obvious" way, with two well-known flaws:
+#
+#   1. `COPY . .` happens BEFORE `pip install`. Any change to the source
+#      code (even a one-line comment) invalidates the Docker layer cache
+#      for everything below it, so dependencies are re-installed on every
+#      rebuild — see experiment 3 for the fix.
+#
+#   2. The full Debian-based `python:3.13` image is used as the base, which
+#      is large (~1 GB) — see experiment 4 for the Alpine comparison.
+#
+# Build context: a clone of
+#   https://github.com/KPI-FICT-MTSD/lab-03-starter-project-python
+#
+# Build:
+#   docker build -f Dockerfile.naive -t spaceship:naive .
+
+FROM python:3.13
+
+WORKDIR /app
+
+# Copy EVERYTHING first — this is the cache-busting mistake.
+COPY . .
+
+RUN pip install -r requirements/backend.in
+
+EXPOSE 8080
+
+CMD ["uvicorn", "spaceship.main:app", "--host=0.0.0.0", "--port=8080"]

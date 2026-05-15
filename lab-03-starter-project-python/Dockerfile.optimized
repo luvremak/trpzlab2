@@ -1,0 +1,31 @@
+# Experiment 3: LAYER-OPTIMIZED Dockerfile for the Python "spaceship" starter.
+#
+# The fix for the naive version: order the layers by how often their inputs
+# change. Things that change rarely go first so their layers stay cached;
+# things that change often go last.
+#
+#   1. Base image            — changes almost never
+#   2. Dependency manifest   — changes rarely  -> COPY requirements/, pip install
+#   3. Application source     — changes often   -> COPY spaceship/, build/
+#
+# After this reordering, editing application code re-uses the cached
+# dependency layer, so a rebuild only re-runs the cheap final COPY steps.
+#
+# Build:
+#   docker build -f Dockerfile.optimized -t spaceship:optimized .
+
+FROM python:3.13
+
+WORKDIR /app
+
+# --- Rarely changes: dependencies -----------------------------------------
+COPY requirements/ requirements/
+RUN pip install --no-cache-dir -r requirements/backend.in
+
+# --- Often changes: application code --------------------------------------
+COPY spaceship/ spaceship/
+COPY build/ build/
+
+EXPOSE 8080
+
+CMD ["uvicorn", "spaceship.main:app", "--host=0.0.0.0", "--port=8080"]

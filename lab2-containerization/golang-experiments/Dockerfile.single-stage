@@ -1,0 +1,37 @@
+# Experiment 1: SINGLE-STAGE build for the Go "fizzbuzz" starter project.
+#
+# Build context: a clone of
+#   https://github.com/comsys-kpi-ua/deploy.lab-containers-starter-project-golang
+#
+# This builds and runs the app inside one image based on `golang:1.23`.
+# The result is correct but very large: the final image contains the entire
+# Go toolchain, the module cache, and the full source tree — none of which
+# is needed to RUN the compiled binary. Experiment 2 fixes that.
+#
+# `go.mod` declares `go 1.17`; a newer `golang` image builds it fine thanks
+# to Go's backward compatibility. Adjust the tag to taste.
+#
+# Build:
+#   docker build -f Dockerfile.single-stage -t fizzbuzz:single-stage .
+# Run:
+#   docker run --rm -p 8080:8080 fizzbuzz:single-stage
+
+FROM golang:1.23
+
+WORKDIR /src
+
+# Dependencies first (rarely change) for layer caching.
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Source and build.
+COPY . .
+RUN go build -o /src/build/fizzbuzz
+
+EXPOSE 8080
+
+# The serve command reads templates/index.html at runtime relative to the
+# working directory, so the working directory must stay /src.
+WORKDIR /src
+ENTRYPOINT ["/src/build/fizzbuzz"]
+CMD ["serve"]

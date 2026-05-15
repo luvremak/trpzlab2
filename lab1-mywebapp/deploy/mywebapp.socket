@@ -1,0 +1,11 @@
+[Unit]
+Description=mywebapp (Simple Inventory) listening socket
+
+[Socket]
+# systemd owns this socket and hands it to the service on the first
+# incoming connection (socket activation). The address/port matches the
+# [server] section of /etc/mywebapp/config.toml.
+ListenStream=127.0.0.1:5200
+
+[Install]
+WantedBy=sockets.target

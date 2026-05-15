@@ -1,0 +1,39 @@
+# Intermediate version of the unit — a plain systemd service WITHOUT socket
+# activation. It is kept in the repository to document the progression
+# required by the assignment ("first a simple systemd unit, then refactor
+# to socket activation").
+#
+# The installer does NOT use this file; it installs mywebapp.service +
+# mywebapp.socket instead. To use this simple version manually:
+#   sudo cp deploy/mywebapp.service.simple /etc/systemd/system/mywebapp.service
+#   sudo systemctl disable --now mywebapp.socket
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now mywebapp.service
+
+[Unit]
+Description=mywebapp - Simple Inventory web application (simple, no socket activation)
+After=network.target postgresql.service
+
+[Service]
+Type=exec
+User=app
+Group=app
+WorkingDirectory=/opt/mywebapp
+Environment=MYWEBAPP_CONFIG=/etc/mywebapp/config.toml
+
+# Run the database migration before the application starts.
+ExecStartPre=/opt/mywebapp/venv/bin/python -m app.migrate
+
+# The application binds the interface/port itself, taken from the config file.
+ExecStart=/opt/mywebapp/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 5200
+
+Restart=on-failure
+RestartSec=2
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

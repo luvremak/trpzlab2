@@ -1,0 +1,64 @@
+# Experiment 2: MULTI-STAGE build with `FROM scratch` for the Go "fizzbuzz"
+# starter project.
+#
+# Stage 1 ("builder") compiles the binary using the full Go toolchain.
+# Stage 2 starts from `scratch` — a completely empty image — and receives
+# only what is actually needed at runtime.
+#
+# --- Why the naive "in lob" version fails -----------------------------------
+# The obvious first attempt is:
+#
+#     FROM golang:1.23 AS builder
+#     WORKDIR /src
+#     COPY . .
+#     RUN go build -o /fizzbuzz
+#     FROM scratch
+#     COPY --from=builder /fizzbuzz /fizzbuzz
+#     CMD ["/fizzbuzz", "serve"]
+#
+# Running it produces "no such file or directory" — for TWO separate reasons:
+#
+#   1. By default the `golang` image builds with CGO enabled, producing a
+#      DYNAMICALLY linked binary. `scratch` has no libc and no dynamic
+#      loader, so the kernel cannot even start the binary. Fix: build a
+#      fully static binary with `CGO_ENABLED=0`.
+#
+#   2. `cmd/serve.go` calls `template.ParseFiles("templates/index.html")` at
+#      runtime, relative to the working directory. If only the binary is
+#      copied, that file is missing and `serve` panics. Fix: also COPY the
+#      `templates/` directory and set WORKDIR so the relative path resolves.
+#
+# The version below applies both fixes.
+#
+# Build:
+#   docker build -f Dockerfile.multistage-scratch -t fizzbuzz:scratch .
+# Run:
+#   docker run --rm -p 8080:8080 fizzbuzz:scratch
+
+# --- Stage 1: build ---------------------------------------------------------
+FROM golang:1.23 AS builder
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# CGO_ENABLED=0 -> a fully static binary with no libc dependency.
+RUN CGO_ENABLED=0 GOOS=linux go build -o /fizzbuzz
+
+# --- Stage 2: runtime (empty image) -----------------------------------------
+FROM scratch
+
+WORKDIR /app
+
+# The static binary...
+COPY --from=builder /fizzbuzz /app/fizzbuzz
+# ...and the runtime asset it loads relative to the working directory.
+COPY --from=builder /src/templates /app/templates
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app/fizzbuzz"]
+CMD ["serve"]

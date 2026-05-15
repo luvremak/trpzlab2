@@ -1,0 +1,26 @@
+# Configuration file for the Lab 1 web application, container edition.
+#
+# Mounted read-only into the app container at /etc/mywebapp/config.toml
+# (see docker-compose.yml). The application reads it via the MYWEBAPP_CONFIG
+# environment variable.
+#
+# Differences from the bare-metal Lab 1 config:
+#   * database.host is "db" — the docker-compose service name of PostgreSQL,
+#     resolved over the project's private network, instead of 127.0.0.1.
+#
+# NOTE: for a lab this keeps the database password in plain text here and,
+# matching, in the `db` service environment of docker-compose.yml. In a real
+# deployment use Docker secrets or an .env file instead.
+
+[server]
+# uvicorn binds 0.0.0.0:5200 itself (see entrypoint.sh); this section is
+# kept for parity with the Lab 1 config and is not read by the app.
+host = "0.0.0.0"
+port = 5200
+
+[database]
+host = "db"
+port = 5432
+name = "mywebapp"
+user = "mywebapp"
+password = "mywebapp_secret"

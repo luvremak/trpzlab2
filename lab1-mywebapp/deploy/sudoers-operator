@@ -1,0 +1,22 @@
+# /etc/sudoers.d/operator
+#
+# The "operator" user may manage ONLY the mywebapp service and reload nginx.
+# No other privileged commands are allowed.
+#
+# Installed by deploy/install.sh with mode 0440 and validated with visudo.
+
+Cmnd_Alias MYWEBAPP_CTL = \
+    /usr/bin/systemctl start mywebapp.service, \
+    /usr/bin/systemctl stop mywebapp.service, \
+    /usr/bin/systemctl restart mywebapp.service, \
+    /usr/bin/systemctl status mywebapp.service, \
+    /usr/bin/systemctl start mywebapp.socket, \
+    /usr/bin/systemctl stop mywebapp.socket, \
+    /usr/bin/systemctl restart mywebapp.socket, \
+    /usr/bin/systemctl status mywebapp.socket
+
+Cmnd_Alias NGINX_RELOAD = \
+    /usr/bin/systemctl reload nginx, \
+    /usr/bin/systemctl reload nginx.service
+
+operator ALL=(root) MYWEBAPP_CTL, NGINX_RELOAD

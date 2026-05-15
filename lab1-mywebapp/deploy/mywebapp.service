@@ -1,0 +1,33 @@
+[Unit]
+Description=mywebapp - Simple Inventory web application
+# Socket-activated: the unit is started by mywebapp.socket on first request.
+Requires=mywebapp.socket
+After=network.target postgresql.service mywebapp.socket
+
+[Service]
+Type=exec
+User=app
+Group=app
+WorkingDirectory=/opt/mywebapp
+Environment=MYWEBAPP_CONFIG=/etc/mywebapp/config.toml
+
+# Run the database migration before the application starts.
+ExecStartPre=/opt/mywebapp/venv/bin/python -m app.migrate
+
+# uvicorn binds to the socket passed by systemd (file descriptor 3).
+ExecStart=/opt/mywebapp/venv/bin/uvicorn app.main:app --fd 3
+
+Restart=on-failure
+RestartSec=2
+
+# --- Service hardening: the app runs with the minimum privileges it needs ---
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

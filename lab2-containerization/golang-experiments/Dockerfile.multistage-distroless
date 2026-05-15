@@ -1,0 +1,49 @@
+# Experiment 3: MULTI-STAGE build with a DISTROLESS runtime image for the
+# Go "fizzbuzz" starter project.
+#
+# `gcr.io/distroless/static-debian12` is Google's distroless base for fully
+# static binaries. Unlike `scratch` it is not completely empty — it ships a
+# minimal, curated set of runtime essentials (CA certificates, /etc/passwd,
+# tzdata, a nonroot user) but still NO shell and NO package manager.
+#
+# Compared with the experiments above:
+#   * vs single-stage : far smaller, no toolchain/source in the image
+#   * vs scratch       : slightly larger, but includes CA certs, timezone
+#                        data and a nonroot user, and is less error-prone
+#                        (e.g. outbound TLS works out of the box)
+#
+# There is still no shell, so `docker exec ... sh` does not work — debugging
+# is done from outside the container (logs, `docker cp`, etc.).
+#
+# Build:
+#   docker build -f Dockerfile.multistage-distroless -t fizzbuzz:distroless .
+# Run:
+#   docker run --rm -p 8080:8080 fizzbuzz:distroless
+
+# --- Stage 1: build ---------------------------------------------------------
+FROM golang:1.23 AS builder
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /fizzbuzz
+
+# --- Stage 2: distroless runtime --------------------------------------------
+FROM gcr.io/distroless/static-debian12
+
+WORKDIR /app
+
+COPY --from=builder /fizzbuzz /app/fizzbuzz
+COPY --from=builder /src/templates /app/templates
+
+EXPOSE 8080
+
+# distroless provides a "nonroot" user (uid 65532) — run unprivileged.
+USER nonroot
+
+ENTRYPOINT ["/app/fizzbuzz"]
+CMD ["serve"]
